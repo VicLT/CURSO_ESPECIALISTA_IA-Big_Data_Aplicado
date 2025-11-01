@@ -1,4 +1,4 @@
-# ----------------------------- MÓDULO 3: PYDANTIC -----------------------------
+# --------------------------- MÓDULO 2: INTRODUCCIÓN ---------------------------
 
 # from fastapi import FastAPI
 
@@ -47,7 +47,7 @@
 
 # ----------------------------- MÓDULO 3: PYDANTIC -----------------------------
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 # 1. Definimos nuestro "schema" como una clase
@@ -120,3 +120,56 @@ def read_item(item_id: int):
     
     # Temporal (en el módulo 4 usaremos HTTPException)
     return {"error": "Item not found"}
+
+# ------------------------------- MÓDULO 4: CRUD -------------------------------
+
+from fastapi import Query
+
+# GET/items/ (Leer todos)
+@app.get("/items/", response_model=list[Item])
+def read_items(max_price: float | None = Query(None, gt=0)):
+    """
+    Lee todos los ítems de la base de datos.
+    - **max_price** (opcional): Filtra ítems con un precio menor o igual.
+    """
+    if max_price:
+        # ¡List comprehension!
+        # Filtramos la BBDD en memoria.
+        filtered_items = [
+            item
+            for item in db
+            if item["price"] <= max_price
+        ]
+        return filtered_items
+    
+# GET/items/{item_id} (Leer uno)
+@app.get("/items/{item_id}", response_model=Item)
+def read_item(item_id: int):
+    # Usamos filter() y una lambda. filter() devuelve un iterador.
+    # next(..., None) toma el primer resultad o devuelve None si no hay.
+    item = next(filter(lambda x: x["id"] == item_id, db), None)
+
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item no encontrado")
+    
+# POST /items/
+@app.post("/items/", response_model=Item, status_code=201) # Una creación exitosa debe devolver 201 Created. 
+def create_item(item: ItemCreate):
+    """
+    Crea un nuevo ítem.
+    """
+    # Lógica para generar un nuevo ID
+    # Usamos max() con una list comprehension y un key lambda (o un generador)
+    last_id = max((i["id"] for i in db), default=0)
+    new_id = last_id + 1
+
+    new_item_data = item.model_dump()
+    new_item_data["id"] = new_id
+
+    # "Guardamos" en la BBDD en memoria
+    db.append(new_item_data)
+
+    # Guardamos en el archivo JSON
+    save_db(db)
+
+    return new_item_data
