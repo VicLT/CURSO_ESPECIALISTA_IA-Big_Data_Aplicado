@@ -5,7 +5,7 @@ from typing import AsyncIterator, List, Dict
 from pathlib import Path
 import json
 
-# ---------------------- Modelos Pydantic ----------------------
+# ------------------------------ Modelos Pydantic ------------------------------
 
 class ItemBase(BaseModel):
     """Modelo base con los campos comunes de un ítem."""
@@ -25,7 +25,7 @@ class Item(ItemBase):
     id: int
 
 
-# ---------------------- Funciones auxiliares -------------------
+# ---------------------------- Funciones auxiliares ----------------------------
 
 def get_db_path() -> Path:
     """Devuelve la ruta absoluta del archivo JSON que simula la base de datos."""
@@ -39,13 +39,13 @@ def load_db() -> List[Dict]:
     """
     json_path = get_db_path()
     if not json_path.exists() or json_path.stat().st_size == 0:
-        print("⚠️ 'database.json' no existe o está vacío. Iniciando con lista vacía.")
+        print("'database.json' no existe o está vacío. Iniciando con lista vacía.")
         return []
     try:
         with open(json_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except json.JSONDecodeError:
-        print("❌ Error: 'database.json' no contiene JSON válido.")
+        print("Error: 'database.json' no contiene JSON válido.")
         return []
 
 
@@ -56,18 +56,18 @@ def save_db(data: List[Dict]) -> None:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 
-# ---------------- Lifespan ----------------
+# ---------------------------------- Lifespan ----------------------------------
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Carga la base de datos al iniciar y la deja disponible en app.state."""
     app.state.db = load_db()
-    print(f"✅ Base de datos cargada: {len(app.state.db)} elementos")
+    print(f"Base de datos cargada: {len(app.state.db)} elementos")
     yield
-    print("🛑 Cerrando aplicación...")
+    print("Cerrando aplicación...")
 
 
-# ----------------------- Inicialización ------------------------
+# ------------------------------- Inicialización -------------------------------
 
 app = FastAPI(
     title="API con Lifespan y CRUD",
@@ -76,7 +76,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ------------------------- Endpoints ----------------------------
+# --------------------------------- Endpoints ---------------------------------
 
 @app.get("/")
 def read_root():
