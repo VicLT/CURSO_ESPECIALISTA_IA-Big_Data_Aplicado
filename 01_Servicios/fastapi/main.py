@@ -36,7 +36,7 @@ def read_root():
 def read_items():
     return db
 
-@app.get("/search/{name}", response_model=Item)
+@app.post("/search/{name}", response_model=Item)
 def search_client(name: str):
     client = next(
         filter(lambda x: x["name"].strip().lower() == name.strip().lower(), db),
