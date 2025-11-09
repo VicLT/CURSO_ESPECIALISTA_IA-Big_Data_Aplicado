@@ -1,0 +1,1 @@
+{"virtualbox":{"/home/vagrant":{"guestpath":"/home/vagrant","hostpath":"C:/Users/victo/PROYECTOS/IA_BigDataAplicado/01_Servicios/fastapi","disabled":false,"__vagrantfile":true},"/vagrant":{"guestpath":"/vagrant","hostpath":"C:/Users/victo/PROYECTOS/IA_BigDataAplicado/01_Servicios","disabled":false,"__vagrantfile":true}}}

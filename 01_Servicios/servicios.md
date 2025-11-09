@@ -15,16 +15,23 @@
     # o si tienes problemas con la ruta en windows
     vagrant box add "[nombre_box]" "[ruta_absoluta_ubicacion.box]"
 ```
+1.7: Comprobar importación de la box:
+```powershell
+    vagrant box list
+```
 ### 2. Crear Vagrantfile
-2.1: Ejecutar el siguiente comando:
+2.1: Abrimos CMD y generamos un Vagrantfile vacío:
 ```powershell
     vagrant init
 ```
-2.2: Se generará un nuevo archivo llamado Vagrantfile y dentro de él escribimos el código necesario en lenguaje Ruby para indicarle todas las instrucciones que deberá ejecutar:
+2.2: Abrimos Vagrantfile y escribimos el código necesario (en lenguaje Ruby) para indicarle todas las instrucciones que deberá ejecutar:
 ```ruby
+    NEW_USERNAME = "victorlt"
+    NEW_PASSWORD = "victorlt"
+
     Vagrant.configure("2") do |config|
         # --- Box base ---
-        config.vm.box = "ubuntu_server_25_10"
+        config.vm.box = "ubuntu_server_25_10_configurada"
 
         # --- Red ---
         config.vm.network "private_network", ip: "192.168.56.2"
@@ -40,19 +47,50 @@
             vb.cpus = 2
         end
 
-        # --- Desactivar inserción de nueva llave ---
-        # config.ssh.insert_key = false
-        
-        # --- Provisión ---
+        # --- Usuario ---
+        #config.ssh.username = "vagrant"
+        #config.ssh.password = "vagrant"
+
+        # --- Deshabilitar la inserción de clave y apuntar a tu privada ---
+        #config.ssh.insert_key = false
+        #config.ssh.private_key_path = [File.expand_path("~/.ssh/id_rsa")]
+
+        # --- Provisiones ---
+        config.vm.provision "shell",
+            path: "create_user.sh",
+            args: [NEW_USERNAME, NEW_PASSWORD]
+
+        # Clave pública en la VM (file + shell):
+        #config.vm.provision "file",
+            #source: File.expand_path("~/.ssh/id_rsa.pub"),
+            #destination: "/tmp/id_rsa.pub"
+
+        #config.vm.provision "shell", inline: <<-SHELL
+        #    mkdir -p /home/vagrant/.ssh
+        #    chmod 700 /home/vagrant/.ssh
+        #    cat /tmp/id_rsa.pub >> /home/vagrant/.ssh/authorized_keys
+        #    chmod 600 /home/vagrant/.ssh/authorized_keys
+        #    chown -R vagrant:vagrant /home/vagrant/.ssh
+        #
+        #    mkdir -p /home/#{NEW_USERNAME}/.ssh
+        #    chmod 700 /home/#{NEW_USERNAME}/.ssh
+        #    cat /tmp/id_rsa.pub >> /home/#{NEW_USERNAME}/.ssh/authorized_keys
+        #    chmod 600 /home/#{NEW_USERNAME}/.ssh/authorized_keys
+        #    chown -R #{NEW_USERNAME}:#{NEW_USERNAME} /home/#{NEW_USERNAME}/.ssh
+        #SHELL
+
+        # Solo en la primera ejecución
         config.vm.provision "shell", run: "once" do |s|
             s.inline = <<-SHELL
-                apt-get update -y
-                apt-get install -y python3 python3-pip
+                sudo add-apt-repository universe
+                sudo apt update -y
+                sudo apt install -y python3.13 python3.13-venv python3-pip
 
                 # Crear el entorno virtual fuera del directorio compartido
-                python3 -m venv /opt/venv
-                /opt/venv/bin/pip install --upgrade pip
-                /opt/venv/bin/pip install fastapi uvicorn
+                sudo python3.13 -m venv /opt/venv --without-pip
+                sudo /opt/venv/bin/python3 -m ensurepip --upgrade
+                sudo /opt/venv/bin/python3 -m pip install --upgrade pip
+                sudo /opt/venv/bin/python3 -m pip install fastapi uvicorn
             SHELL
         end
     end
@@ -68,23 +106,30 @@ En la misma consola abierta que hemos usado en el paso anterior:
     vagrant ssh
 ```
 ### 5. Levantar el servicio
-Una vez conectados a la VM, en la misma consola:
-```powershell
-    uvicorn
+Primero activamos el entorno virtual:
+```bash
+    source /opt/venv/bin/activate
+```
+```bash
+    # uvicorn [nombre_archivo_compartido(sin .py)]:[nombre_application] --host 0.0.0.0 --port 8000
+    uvicorn main:FastAPI --host 0.0.0.0 --port 8000
 ```
 ### RESOLUCIÓN DE PROBLEMAS
 #### 1. Error a la hora de crear una nueva VM y no coincide la private key:
 Borramos el contenido de los siguientes directorios:
 - Carpeta ```.vagrant``` creada cuando se ejecutó ```vagrant up```.
+```powershell
+    vagrant destroy -f
+```
 - Contenido de la carpeta ```.ssh```:
 ```powershell
-C:\Users\[tu_nombre_de_usuario]\.ssh
+    C:\Users\[tu_nombre_de_usuario]\.ssh
 ```
 - Máquina virtual que se creó cuando se ejecutó ```vagrant up```:
 ```powershell
-C:\Users\[tu_nombre_de_usuario]\VirtualBox VMs\[nombre_vm]
+    C:\Users\[tu_nombre_de_usuario]\VirtualBox VMs\[nombre_vm]
 ```
 - Claves privadas almacenadas relacionadas (ojo con lo que eliminas):
 ```powershell
-C:\Users\[tu_nombre_de_usuario]\.vagrant.d\insecure_private_keys
+    C:\Users\[tu_nombre_de_usuario]\.vagrant.d\insecure_private_keys
 ```
