@@ -48,7 +48,7 @@ vagrant box add "[nombre_box]" "[ruta_absoluta_ubicacion.box]"
 vagrant box list
 ```
 ### 3. Preparar la API
-3.1: Creamos una subcarpeta en el mismo directorio donde estará ubicado el Vagrantfile y dentro de ella un archivo ```main.py``` con el siguiente código para FastAPI:
+Creamos una subcarpeta en el mismo directorio donde estará ubicado el Vagrantfile y dentro de ella un archivo ```main.py``` con el siguiente código para FastAPI:
 ```python
 import random
 from fastapi import FastAPI
@@ -71,35 +71,52 @@ app = FastAPI(
 def generate_client_id(client: ClientRequest):
     return {"id": random.randint(1, 1000), "name": client.name}
 ```
-### 4. Crear Vagrantfile
-4.1: Abrimos CMD y generamos un Vagrantfile vacío en el directorio mencionado en el paso anterior:
+### 4. Preparar el script de creación de nuevos usuarios
+Creamos un archivo nuevo con extensión ```.sh``` en el mismo directorio donde estará ubicado el Vagrantfile e introducimos lo siguiente:
+```shell
+#!/bin/bash
+USERNAME=$1
+PASSWORD=$2
+
+if id -u "$USERNAME" >/dev/null 2>&1; then
+  echo "El usuario '$USERNAME' ya existe. Omitiendo la creación."
+else
+  sudo useradd -m -s /bin/bash "$USERNAME"
+  echo "${USERNAME}:${PASSWORD}" | sudo chpasswd
+  sudo usermod -aG sudo "$USERNAME"
+  echo "Usuario '$USERNAME' creado con éxito."
+fi
+```
+### 5. Crear Vagrantfile
+5.1: Abrimos CMD y generamos un Vagrantfile vacío en el directorio mencionado en el paso anterior:
 ```powershell
 vagrant init
 ```
-4.2: Abrimos el Vagrantfile y escribimos en lenguaje Ruby todas las instrucciones siguientes:
+5.2: Abrimos el Vagrantfile y escribimos en lenguaje Ruby todas las instrucciones siguientes:
 ```ruby
 NEW_USERNAME = "victorlt"
 NEW_PASSWORD = "victorlt"
 
 Vagrant.configure("2") do |config|
-    # --- Box base ---
+    # ----------- BOX BASE -----------
     config.vm.box = "ubuntu_server_25_10_configurada"
 
-    # --- Red ---
+    # ----------- RED -----------
     config.vm.network "private_network", ip: "192.168.56.2"
     config.vm.network "forwarded_port", guest: 80, host: 8080
 
-    # --- Carpeta compartida ---
+    # ----------- CARPETA COMPARTIDA -----------
     config.vm.synced_folder "./fastapi", "/home/vagrant"
     
-    # --- Hardware ---
+    # ----------- HARDWARE -----------
     config.vm.provider "virtualbox" do |vb|
         vb.name = "ubuntu_server_vagrant_01"
         vb.memory = "2048"
         vb.cpus = 2
     end
 
-    # --- Provisiones ---
+    # ----------- PROVISIONES -----------
+    # Creación de nuevo usuario con las variables globales
     config.vm.provision "shell",
         path: "create_user.sh",
         args: [NEW_USERNAME, NEW_PASSWORD]
@@ -133,17 +150,17 @@ Vagrant.configure("2") do |config|
     end
 end
 ```
-### 5. Ejecutar Vagrantfile
+### 6. Ejecutar Vagrantfile
 Abrimos CMD en la misma ruta donde esté ubicado el Vagrantfile e introducimos el siguiente comando para que se lleve a cabo la creación e instalación automatizada de la VM con la ISO base más los nuevos parámetros definidos:
 ```powershell
 vagrant up
 ```
-### 6. Conectarnos a la VM
+### 7. Conectar a la VM
 En la misma consola abierta que hemos usado en el paso anterior:
 ```powershell
 vagrant ssh
 ```
-### 7. Levantar el servicio
+### 8. Levantar el servicio
 Primero activamos el entorno virtual:
 ```bash
 source /opt/venv/bin/activate
@@ -152,7 +169,7 @@ Ahora ya podemos levantar el servidor:
 ```bash
 uvicorn [nombre_archivo_compartido(sin .py)]:app --host 0.0.0.0 --port 8000
 ```
-### 8. Probamos la conexión entre el host y la máquina virtual (API)
+### 9. Probamos la conexión entre el host y la máquina virtual (API)
 8.1: Abrimos el navegador web e introducimos en la barra de direcciones:
 ```bash
 # Esto nos debería mostrar la documentación completa de la API.
@@ -168,7 +185,7 @@ vagrant destroy -f
 # Asegúrate de que se ha eliminado correctamente en:
 C:\Users\[tu_nombre_de_usuario]\VirtualBox VMs\
 ```
-- Eliminar carpeta ```.vagrant``` que se ha creado en el mismo directorio donde hicimos ```vagrant up```:
+- Eliminar carpeta ```.vagrant``` que se ha creado en el mismo directorio donde tenemos el Vagrantfile:
 - Eliminar contenido de la carpeta ```.ssh```:
 ```powershell
 C:\Users\[tu_nombre_de_usuario]\.ssh
@@ -179,4 +196,8 @@ ssh-keygen -t rsa -b 4096
 - Eliminar claves privadas almacenadas:
 ```powershell
 C:\Users\[tu_nombre_de_usuario]\.vagrant.d\insecure_private_keys
+```
+- Reinstalar:
+```powershell
+vagrant up
 ```
